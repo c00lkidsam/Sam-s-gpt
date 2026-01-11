@@ -3,7 +3,7 @@ import requests
 import os
 
 # Get OpenAI key from environment variable
-API_KEY = os.environ.get("OPENAI_API_KEY")
+API_KEY = os.environ.get("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")
 
 SYSTEM_PROMPT = "You are Sam GPT, a friendly and intelligent chatbot. Talk casually and clearly. No NSFW, no hate."
 
