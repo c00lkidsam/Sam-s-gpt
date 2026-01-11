@@ -2,7 +2,10 @@ from flask import Flask, request, jsonify, render_template_string
 import requests
 import os
 
-API_KEY = "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"  # Replace with your OpenAI key
+# Use environment variable for OpenAI key (set this in Render)
+API_KEY = os.environ.get("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")
+if not API_KEY:
+    raise Exception("OPENAI_API_KEY not set! Go to Render > Environment Variables and set it.")
 
 SYSTEM_PROMPT = "You are Sam GPT, a friendly and intelligent chatbot. Talk casually and clearly. No NSFW, no hate."
 
@@ -10,6 +13,7 @@ app = Flask(__name__)
 MAX_MESSAGES = 10
 messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+# Hawk logo URL
 HAWK_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/1/12/Hawk_icon.png"
 
 HTML_PAGE = f"""
@@ -127,9 +131,13 @@ window.onload = function() {{
         if(!message) return;
         addMessage(message,'user');
         input.value='';
-        const res = await fetch('/chat',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{message}})}});
-        const data = await res.json();
-        addMessage(data.reply,'bot');
+        try {{
+            const res = await fetch('/chat',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{message}})}});
+            const data = await res.json();
+            addMessage(data.reply,'bot');
+        }} catch (err) {{
+            addMessage("Error connecting to server!","bot");
+        }}
     }}
 
     function addMessage(msg,type){{
@@ -177,9 +185,13 @@ def chat():
             }
         )
         data = response.json()
-        reply = data["choices"][0]["message"]["content"]
-    except:
-        reply = "Oops, something went wrong! Try again."
+        # Check if OpenAI returned an error
+        if "error" in data:
+            reply = f"OpenAI API Error: {data['error']['message']}"
+        else:
+            reply = data["choices"][0]["message"]["content"]
+    except Exception as e:
+        reply = f"Server Error: {str(e)}"
 
     messages.append({"role": "assistant", "content": reply})
     return jsonify({"reply": reply})
