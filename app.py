@@ -2,10 +2,8 @@ from flask import Flask, request, jsonify, render_template_string
 import requests
 import os
 
-# Use environment variable for OpenAI key (set this in Render)
-API_KEY = os.environ.get("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")
-if not API_KEY:
-    raise Exception("OPENAI_API_KEY not set! Go to Render > Environment Variables and set it.")
+# Get OpenAI key from environment variable
+API_KEY = os.environ.get("OPENAI_API_KEY")
 
 SYSTEM_PROMPT = "You are Sam GPT, a friendly and intelligent chatbot. Talk casually and clearly. No NSFW, no hate."
 
@@ -136,7 +134,7 @@ window.onload = function() {{
             const data = await res.json();
             addMessage(data.reply,'bot');
         }} catch (err) {{
-            addMessage("Error connecting to server!","bot");
+            addMessage("Server error, try again later.","bot");
         }}
     }}
 
@@ -172,26 +170,28 @@ def chat():
     if len(messages) > MAX_MESSAGES:
         messages = [messages[0]] + messages[-(MAX_MESSAGES-1):]
 
-    try:
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "gpt-4o-mini",
-                "messages": messages
-            }
-        )
-        data = response.json()
-        # Check if OpenAI returned an error
-        if "error" in data:
-            reply = f"OpenAI API Error: {data['error']['message']}"
-        else:
-            reply = data["choices"][0]["message"]["content"]
-    except Exception as e:
-        reply = f"Server Error: {str(e)}"
+    if not API_KEY:
+        reply = "API key not set. Please set OPENAI_API_KEY in environment variables."
+    else:
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": messages
+                }
+            )
+            data = response.json()
+            if "error" in data:
+                reply = f"OpenAI API Error: {data['error']['message']}"
+            else:
+                reply = data["choices"][0]["message"]["content"]
+        except Exception as e:
+            reply = f"Server error: {str(e)}"
 
     messages.append({"role": "assistant", "content": reply})
     return jsonify({"reply": reply})
